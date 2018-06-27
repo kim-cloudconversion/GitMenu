@@ -11,7 +11,7 @@ REM ----------------------------------------------------------------------------
 SET BASE_DRIVE=C:
 SET BASE_DIR=\Users\Kim Kitchen\Documents
 SET PROJ_DRIVE=Z:
-SET PROJ_DIR=Documents\Workspace
+SET PROJ_DIR=Documents\workspace
 REM --------------------------------------------------------------------------------------------
 REM Set Base URL on GitHub (Where GitHub stores your projects)
 SET GIT_URL=https://github.com/kim-cloudconversion
@@ -87,6 +87,7 @@ REM ############################################################################
   echo   B) Branch - Change local files to a specific branch
   echo   S) Show Status (Files changed, not committed)
   echo   E) Edit This Projects Properties
+  echo   U) Update Remote Settings 
   echo.
   echo   Q) Quit (return to main menu)
   echo.
@@ -101,7 +102,8 @@ REM ############################################################################
   if "%OPT2%" == "b" call:BRANCH %1 
   if "%OPT2%" == "s" call:STATUS %1
   if "%OPT2%" == "e" call:EDIT1
-  rem if "%OPT2%" == "d" call:DELETE1 %1
+  if "%OPT2%" == "u" call:UPDATE
+  rem if "%OPT2%" == "d" call:DELETE1
 
   if "%OPT2%" == "q" exit /b
   GOTO FOLDER
@@ -352,7 +354,8 @@ REM ############################################################################
   cd \%PROJ_DIR%\%FOLDER%
 
   rem Step 3) If we're NOT standing in the correct folder then we need to create it
-  if "%PROJ_DRIVE%\%PROJ_DIR%\%FOLDER%" == "%CD%" GOTO ADD5
+  if /I "%PROJ_DRIVE%\%PROJ_DIR%\%FOLDER%" == "%CD%" GOTO ADD5
+  if "%DEBUG%" == "1" echo Current Directory: %CD%
   echo Project Folder '%PROJ_DRIVE%\%PROJ_DIR%\%FOLDER%' Does Not Exist.
   SET /p YN=Do you want to Create This Folder (Y/N) ? -^>
   if "%YN%" == "y" GOTO ADD4
@@ -367,14 +370,14 @@ REM ############################################################################
 :ADD4
   mkdir \%PROJ_DIR%\%FOLDER%
   cd \%PROJ_DIR%\%FOLDER%
-
+  rem falls into ADD5
 REM ############################################################################################
 :ADD5
   git init
   echo Adding remote entry for GitHub
   git remote add %REPO% https://github.com/%GITPATH%/%PROJECT%.git
   echo setting 'full control' permissions for 'Everyone'
-  icacls "%PROJ_DRIVE%\%PROJ_DIR%\%1"  /grant Everyone:(OI)(CI)F
+  icacls "%PROJ_DRIVE%\%PROJ_DIR%\%FOLDER%"  /grant Everyone:(OI)(CI)F
   echo New Project %PROJECT% Created !
   pause
   GOTO MENU
@@ -397,6 +400,9 @@ REM ############################################################################
   exit /b
 REM ############################################################################################
 :DELETE2
+  SET P=PROJECT%1%
+  SET /p YN=Are you SURE you want to DELETE Project !%P%! (Y/N) -^>
+  if "%YN%" NEQ "y" exit /b
   SET TO_DELETE=%1%
   SET NEXT=1
   call:INI_HEADER
@@ -407,6 +413,12 @@ REM ############################################################################
   SET FOLDER%NEXT%=
   SET USER%NEXT%=
   SET PASS%NEXT%=
+  SET PROJECT=
+  SET FOLDER=
+  SET USER=
+  SET PASS=
+  SET GITPATH=
+
   exit /b
 REM ############################################################################################
 :DELETE3
@@ -429,6 +441,18 @@ REM ############################################################################
   
   rem pause
   exit /b
+REM ############################################################################################
+:UPDATE
+  %PROJ_DRIVE%
+  cd \%PROJ_DIR%\%FOLDER%
+  if "%DEBUG%" == "1" echo Current Directory: %CD%
+  git remote remove %REPO%
+  git remote add %REPO% https://github.com/%GITPATH%/%PROJECT%.git
+  %BASE_DRIVE%
+  cd %BASE_DIR%
+  pause
+  exit /b
+  
 REM ############################################################################################
 :INI_HEADER
   for /F "tokens=2" %%i in ('date /t') do set mydate=%%i
