@@ -1,0 +1,17 @@
+#= gitmenu.ini - 06/27/2018 17:11:10.20 - Saved Projects for ini_test script 
+BASE_DRIVE=
+BASE_DIR=/Users/kimkitchen/Documents/workspace
+PROJ_DRIVE=
+PROJ_DIR=/Users/kimkitchen/Documents/workspace
+#= Project 1 -----------------------
+PROJECT1=SFArchive
+FOLDER1=SFArchive
+USER1=kim@cloudconversion.com
+PASS1=DoIKnow2#
+GITPATH1=kim-cloudconversion
+#= Project 2 -----------------------
+PROJECT2=GitMenu
+FOLDER2=GitMenu
+USER2=kim@cloudconversion.com
+PASS2=DoIKnow2#
+GITPATH2=kim-cloudconversion
