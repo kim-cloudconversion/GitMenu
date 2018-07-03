@@ -88,9 +88,9 @@ push() {
     esac
     if [ "$BRANCH" != "" ] ; then
       echo "Pushing $PROJECT $BRANCH Branch up to GITHUB ..."
-      URL="hops://$USER:$PASS@github.com/$GITPATH/$PROJECT.git"
-      # git push --tags $REPO HEAD:$BRANCH
-      git push --tags $URL HEAD:$BRANCH
+      # URL="https://$USER:$PASS@github.com/$GITPATH/$PROJECT.git"
+      git push --tags $REPO HEAD:$BRANCH
+      # git push --tags $URL HEAD:$BRANCH
       echo "Done !"
       pause
     fi
@@ -123,8 +123,9 @@ project_menu() {
       echo "  L) Pull files from remote repo to local     "
       echo "  P) Push files from local repo to remote     "
       echo "  B) Branch - Change Local Files to a Specific Branch"
-      echo "  R) Remote Repository (View/Update)          "
+      echo "  R) Refresh from Remote Repository"
       echo "  S) Show Status (files changed not committed)"
+      echo "  U) Update Remote Repository (View/Add/Remove)"
       echo "  Q or X) Quit (Exit)                         "
       echo ""
       echo "Please Select ->\c"
@@ -273,6 +274,38 @@ settings() {
   echo "Save These Values (Y/N) ? \c";read YN
   if [ "$YN" == "y" ] ; then save_ini ; else echo "Settings Not Saved !" ; fi
   pause
+}
+################################################################
+update() {
+  DONE3="no"
+  while [ "$DONE3" == "no" ]
+    do
+    clear
+    header
+    echo "Update Remote Repositories ..."
+    git remote -v
+    echo
+    echo "  A) Add New GIT Remote. "
+    echo "  R) Remove a GIT Remote. "
+    echo "  Q or X) Quit (Exit)."
+    echo "Please Select ->\c"; read OPT3
+    case $OPT3 in
+      a|A) echo "Please Enter a Remote Name ->\c";read TEMP1
+           git remote add $TEMP1 --tags https://$USER@github.com/$GITPATH/$PROJECT.git
+           pause ;;
+      r|R) echo "Please Enter the Remote Name to Remove ->\c";read TEMP1
+           YN=
+           echo "Are you SURE you want to REMOVE $TEMP1 (Y/N) ? \c";read YN
+           if [ "$YN" == "y" ]
+             then
+             git remote remove $TEMP1
+           else echo "Remote Not Removed !"; 
+           fi
+           pause ;;
+      q|Q|x|X) DONE3="yes";;
+      *) echo "$OPT3 is not a valid option.";pause;;
+    esac
+  done 
 }
 ################################################################
 ################################################################
