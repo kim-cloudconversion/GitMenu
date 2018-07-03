@@ -64,35 +64,38 @@ add_one() {
 ################################################################
 commit() {
   echo "Commit Changes to $PROJECT ..."
+  echo "$PWD"
   echo "Please Enter your Descriptive Commit Message"
   read MESG
-  git commit -m $MESG 
+  git commit -a -m '$MESG'
   pause
 }
 ################################################################
-# push() {
-#   YN=
-#   BRANCH=
-#   echo "Are you SURE you want to PUSH $PROJECT up to GITHUB (Y/N) ? \c"
-#   read YN
-#   if [ "$YN" = "y" ] ; then
-#     echo ""
-#     echo "D) Development Branch"
-#     echo "M) Master Branch"
-#     echo "Select Branch to PUSH ->\c"; read B
-#     case $B in
-#       d|D) BRANCH="development";;
-#       m|M) BRANCH="master";;
-#       *) echo "No Branch Selected, PUSH Cancelled";pause;;
-#     esac
-#     if [ "$BRANCH" != "" ] ; then
-#       echo "Pushing $PROJECT $BRANCH Branch up to GITHUB ..."
-#       git push --tags $REPO HEAD:$BRANCH
-#       echo "Done !"
-#       pause
-#     fi
-#   fi
-# }
+push() {
+  YN=
+  BRANCH=
+  echo "Are you SURE you want to PUSH $PROJECT up to GITHUB (Y/N) ? \c"
+  read YN
+  if [ "$YN" = "y" ] ; then
+    echo ""
+    echo "D) Development Branch"
+    echo "M) Master Branch"
+    echo "Select Branch to PUSH ->\c"; read B
+    case $B in
+      d|D) BRANCH="development";;
+      m|M) BRANCH="master";;
+      *) echo "No Branch Selected, PUSH Cancelled";pause;;
+    esac
+    if [ "$BRANCH" != "" ] ; then
+      echo "Pushing $PROJECT $BRANCH Branch up to GITHUB ..."
+      URL="hops://$USER:$PASS@github.com/$GITPATH/$PROJECT.git"
+      # git push --tags $REPO HEAD:$BRANCH
+      git push --tags $URL HEAD:$BRANCH
+      echo "Done !"
+      pause
+    fi
+  fi
+}
 
 ################################################################
 project_menu() {
@@ -114,12 +117,13 @@ project_menu() {
       header
       echo "  Curent Project: $PROJECT"
       echo "+ -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- +"
-      echo "  A) Add Files to GIT Index                   "
+      echo "  A) Add ALL Files to the GIT Index                   "
       echo "  O) Add ONE File to the GIT Index"
       echo "  C) Commit changed files to local repository "
       echo "  L) Pull files from remote repo to local     "
-      echo "  R) Remote Repository (View/Update)          "
       echo "  P) Push files from local repo to remote     "
+      echo "  B) Branch - Change Local Files to a Specific Branch"
+      echo "  R) Remote Repository (View/Update)          "
       echo "  S) Show Status (files changed not committed)"
       echo "  Q or X) Quit (Exit)                         "
       echo ""
@@ -211,11 +215,11 @@ edit_project() {
   if [ "$TEMP3" != "" ] ; then USER=$TEMP3 ; fi
   if [ "$TEMP4" != "" ] ; then PASS=$TEMP4 ; fi
   if [ "$TEMP5" != "" ] ; then GITPATH=$TEMP5 ; fi
-  PROJECT$INDEX=$PROJECT
-  FOLDER$INDEX=$FOLDER
-  USER$INDEX=$USER
-  PASS$INDEX=$PASS
-  GITPATH$INDEX=$GITPATH
+  set PROJECT$INDEX=$PROJECT
+  setFOLDER$INDEX=$FOLDER
+  set USER$INDEX=$USER
+  set PASS$INDEX=$PASS
+  set GITPATH$INDEX=$GITPATH
   echo "PROJECT=$PROJECT"
   echo "FOLDER=$FOLDER"
   echo "USER=$USER"
