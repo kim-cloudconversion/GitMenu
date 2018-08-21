@@ -20,13 +20,15 @@ DEBUG=0
 MAX_PROJECTS=20
 INDEX=0
 # PROJECT1="xxx"
+BOLD=$(tput bold)
+NORM=$(tput sgr0)
 
 ################################################################
 # Sub-functions must be declared first (Main function later)
 ################################################################
 header() {
   echo "+ -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- +"
-  echo "|  GitMenu - v1.00a - Git Project Manager Script        |"
+  echo "|  ${BOLD}GitMenu${NORM} - v1.00a - Git Project Manager Script        |"
   echo "+ -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- +"
   if [ "$DEBUG" == "1" ]
      then 
@@ -98,6 +100,33 @@ push() {
 }
 
 ################################################################
+pull() {
+  YN=
+  BRANCH=
+  echo "Are you SURE you want to PULL $PROJECT down from GITHUB (Y/N) ? \c"
+  read YN
+  if [ "$YN" = "y" ] ; then
+    echo ""
+    echo "D) Development Branch"
+    echo "M) Master Branch"
+    echo "Select Branch to PUSH ->\c"; read B
+    case $B in
+      d|D) BRANCH="development";;
+      m|M) BRANCH="master";;
+      *) echo "No Branch Selected, PUSH Cancelled";pause;;
+    esac
+    if [ "$BRANCH" != "" ] ; then
+      echo "Pulling $PROJECT $BRANCH Branch down from GITHUB ..."
+      # URL="https://$USER:$PASS@github.com/$GITPATH/$PROJECT.git"
+      git pull --tags $REPO $BRANCH
+      # git push --tags $URL HEAD:$BRANCH
+      echo "Done !"
+      pause
+    fi
+  fi
+}
+
+################################################################
 project_menu() {
   if [ "$DEBUG" = "1" ]
     then
@@ -115,7 +144,7 @@ project_menu() {
     do
       clear
       header
-      echo "  Curent Project: $PROJECT"
+      echo "  Curent Project: ${BOLD}$PROJECT${NORM}"
       echo "+ -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- +"
       echo "  A) Add ALL Files to the GIT Index                   "
       echo "  O) Add ONE File to the GIT Index"
@@ -126,6 +155,7 @@ project_menu() {
       echo "  R) Refresh from Remote Repository"
       echo "  S) Show Status (files changed not committed)"
       echo "  U) Update Remote Repository (View/Add/Remove)"
+      echo "  D) Salesforce DX Menu."
       echo "  Q or X) Quit (Exit)                         "
       echo ""
       echo "Please Select ->\c"
@@ -141,6 +171,7 @@ project_menu() {
           s|S) git status; pause;;
           e|E) edit_project;;
           u|U) update;;
+          d|D) sfdx_menu;;
           q|Q|x|X) DONE2="yes";;
 	  *) echo "You Chose '$OPT2'"
              echo "Press [Enter] to continue \c";read JUNK;;
@@ -176,7 +207,7 @@ add_project() {
     NEXT=
     for i in `seq 1 $MAX_PROJECTS`; do
       VAR="PROJECT$i"
-      echo "i=$i, $VAR=${!VAR}, NEXT=$NEXT"
+      # echo "i=$i, $VAR=${!VAR}, NEXT=$NEXT"
       if [ "${!VAR}" == "" ] && [ "$NEXT" == "" ] ; then NEXT=$i; fi
     done 
     if [ "$DEBUG" = "1" ] ; then echo "Next Index = $NEXT";pause; fi
@@ -186,7 +217,33 @@ add_project() {
     declare PASS$NEXT=$TEMP4
     declare GITPATH$NEXT=$TEMP5
     echo "Save This New Project (Y/N) ? \c";read YN
-    if [ "$YN" = "y" ] ; then save_ini; fi
+    if [ "$YN" = "y" ] ; then 
+      save_ini; 
+      if [ ! -d $TEMP2 ] ; then
+	echo "Creating Folder $TEMP2 ..."
+        mkdir $TEMP2;
+        chmod 777 $TEMP2
+        fi
+      cd $TEMP2
+      if [ ! -d .git ]
+        then
+        echo "Initializing GIT Repository ..."
+        git init
+        echo "Done !"
+        fi
+      cd ..
+      if [ ! -f packages.txt ]
+        then
+        echo "Add packages.txt (Y/N) ? \c"; read YN2
+        if [ "$YN2" == "y" ] ; then
+          echo "04tA00000003FAY         ECS V16.93" > packages.txt;
+          echo "04t80000000ciLdAAI      eCommSource V13.96" >> packages.txt
+          echo "ECS and eCommSource Packages added to packages.txt"
+          echo "packages.txt" >> .forceignore
+          echo "packages.txt added to .forceignore file"
+          fi 
+        fi
+      fi
   fi
 pause
 }
@@ -233,6 +290,50 @@ edit_project() {
   pause
 }
 ################################################################
+delete_project() {
+    clear
+    header
+    echo "  DELETE A Saved Project"
+    echo "  Choose a Project to Delete..."
+    for i in `seq 1 $MAX_PROJECTS`; do 
+      VAR="PROJECT$i"
+      VAL=${!VAR}
+      if [ "${!VAR}" != "" ]; then echo "  $i) ${!VAR}"; fi
+      done
+    echo "  Q or X) Quit (Without Deleting)"
+    echo ""
+    echo "Please Select ->\c"
+    read OPT5
+    case $OPT5 in
+	q|Q|x|X) DONE5="yes";;
+	*) VAR="PROJECT$OPT5"
+           VAL=${!VAR}
+           if [ "$VAL" != "" ]; then
+             echo "  Are you SURE you want to DELETE PROJECT $VAL (Y/N) ? \c";
+             read YN1;
+             if [ "$YN1" == "y" ] ; then
+               VAR="FOLDER$OPT5"
+               VAL=${!VAR}
+               echo "  FOLDER $VAL will be left intact."
+               unset PROJECT$OPT5
+               unset FOLDER$OPT5
+               unset USER$OPT5
+               unset PASS$OPT5
+               unset GITPATH$OPT5
+               save_ini
+               pause
+             else
+               echo "  Project $VAL WAS NOT Deleted !"
+               pause
+               fi
+           else
+             echo "You Chose '$OPT5'"
+             echo "Press [Enter] to continue /c";read JUNK
+             fi ;;
+    esac
+  
+}
+################################################################
 save_ini() {
   DT=`date +"%D %T"`
   # INI_FILE2="gitmenu2.dat"
@@ -240,16 +341,18 @@ save_ini() {
   echo "#= gitmenu.dat - $DT - Saved Projects for gitmenu script" > $INI_FILE
   echo "BASE_DIR=$BASE_DIR" >> $INI_FILE
   echo "PROJ_DIR=$PROJ_DIR" >> $INI_FILE
+  j=1;
   for i in `seq 1 $MAX_PROJECTS`; do
     VAR="PROJECT$i"
     VAL=${!VAR}
     if [ "$VAL" != "" ]  ; then 
-      echo "#= Project #$i -------------------" >> $INI_FILE
-      echo "$VAR=$VAL" >> $INI_FILE
-      VAR="FOLDER$i"; VAL=${!VAR}; echo "$VAR=$VAL" >> $INI_FILE
-      VAR="USER$i"; VAL=${!VAR}; echo "$VAR=$VAL" >> $INI_FILE
-      VAR="PASS$i"; VAL=${!VAR}; echo "$VAR=$VAL" >> $INI_FILE
-      VAR="GITPATH$i"; VAL=${!VAR}; echo "$VAR=$VAL" >> $INI_FILE    
+      echo "#= Project #$j -------------------" >> $INI_FILE
+      echo "PROJECT$j=$VAL" >> $INI_FILE
+      VAR="FOLDER$i"; VAL=${!VAR}; echo "FOLDER$j=$VAL" >> $INI_FILE
+      VAR="USER$i"; VAL=${!VAR}; echo "USER$j=$VAL" >> $INI_FILE
+      VAR="PASS$i"; VAL=${!VAR}; echo "PASS$j=$VAL" >> $INI_FILE
+      VAR="GITPATH$i"; VAL=${!VAR}; echo "GITPATH$j=$VAL" >> $INI_FILE 
+      j=$((j + 1))  
     fi
   done 
   echo "$INI_FILE Saved Successfully !"
@@ -287,13 +390,16 @@ update() {
     echo
     echo "  A) Add New GIT Remote. "
     echo "  R) Remove a GIT Remote. "
+    echo "  I) Initialize Local GIT Repository."
     echo "  Q or X) Quit (Exit)."
     echo "Please Select ->\c"; read OPT3
     case $OPT3 in
-      a|A) echo "Please Enter a Remote Name ->\c";read TEMP1
-           git remote add $TEMP1 --tags https://$USER@github.com/$GITPATH/$PROJECT.git
+      a|A) echo "Please Enter a Remote Name (origin) ->\c";read TEMP1
+           if [ "$TEMP1" == "" ] ; then TEMP1="origin"; fi
+           git remote add $TEMP1 --tags https://github.com/$GITPATH/$PROJECT.git
            pause ;;
-      r|R) echo "Please Enter the Remote Name to Remove ->\c";read TEMP1
+      r|R) echo "Please Enter the Remote Name to Remove (origin) ->\c";read TEMP1
+           if [ "$TEMP1" == "" ] ; then TEMP1="origin"; fi
            YN=
            echo "Are you SURE you want to REMOVE $TEMP1 (Y/N) ? \c";read YN
            if [ "$YN" == "y" ]
@@ -302,10 +408,132 @@ update() {
            else echo "Remote Not Removed !"; 
            fi
            pause ;;
+      i|I) git init
+           echo "Git Repository Initialized !";pause;;
       q|Q|x|X) DONE3="yes";;
       *) echo "$OPT3 is not a valid option.";pause;;
     esac
   done 
+}
+################################################################
+sfdx_menu() {
+  DONE4="no"
+  while [ "$DONE4" == "no" ]
+    do
+    clear
+    header
+    echo "  Salesforce DX Menu ..."
+    echo "  Curent Project: ${BOLD}$PROJECT${NORM}"
+    echo "+ -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- +"
+    echo "  O) Open Salesforce DX DevHub (browser)."
+    echo "  L) List Salesforce DX Orgs."
+    echo "  C) Create a Scratch Org."
+    echo "  D) Delete a Scratch Org."
+    echo "  E) View Latest Push Errors."
+    echo "  P) Push Source to a Scratch Org."
+    echo "  U) Pull Source from a Scratch Org."
+    echo "  V) View Latest Push/Pull Errors."
+
+    echo "  Q or X) Quit (Exit SFDX Menu)"
+    echo "Please Select ->\c"; read OPT4
+    case $OPT4 in
+        o|O) sfdx force:org:list
+             echo "Please Enter Org Alias to Open ->\c";read ORGNAME
+	     sfdx force:org:open -u "$ORGNAME" ; pause ;;
+        l|L) sfdx force:org:list; pause ;;
+        c|C) echo "Please Enter a Unique Name for this scratch org ->\c";read ORGNAME
+             echo "Creating $ORGNAME Scratch Org ..."
+             sfdx force:org:create -a "$ORGNAME" -d 30 -s -v $USER edition=Developer
+             echo "NOTE: Please Copy the Username above ..."
+             pause
+             if [ -f packages.txt ] ; then
+               echo "Install Prerequisite Packages (Y/N) ? \c";read YN4B
+               if [ "$YN4B" == "y" ] ; then
+                 for PKG in `cut -f 1 packages.txt`
+                   do
+                   # sfdx force:package:install --package $PKG -u Spree-Dev
+                   NAME=`grep $PKG packages.txt | cut -f 2,3,4`
+                   echo "Installing $NAME ...\c"
+                   RESULT=`sfdx force:package:install --package $PKG -u $ORGNAME`
+                   CMD=`echo $RESULT | cut -f 13-18 -d ' '`
+                   echo "CMD=$CMD"
+                   echo "waiting on package install ...\c";
+                   STAT=
+                   while [ "$STAT" == "" ]
+                     do
+                     sleep 5
+                     echo ".\c"
+                     TEMP=`eval "$CMD"`
+                     STAT1=`echo $TEMP | grep Successfully`
+                     STAT2=`echo $TEMP | grep ERROR`
+                     if [ "$STAT1" != "" -a "$STAT2" == "" ] ; then STAT=$STAT1; fi
+                     if [ "$STAT1" == "" -a "$STAT2" != "" ] ; then STAT=$STAT2; fi
+                     done
+                   if [ "$STAT2" != "" ]
+                     then
+                     echo "$NAME: $STAT2"
+                     break;
+                     fi
+                   echo " Done!"
+                   done
+                 echo "All Packages Installed !"
+                 fi
+               fi
+             echo "Push This Project to $ORGNAME (Y/N) \c";read YESNO4
+             if [ "$YESNO4" == "y" ] ; then 
+               echo "Pushing $PROJECT Source to $ORGNAME org (This may take a while) ..."
+               DT=`date`
+               echo "Push Request to $ORGNAME - $DT" > pull_errors.txt
+               sfdx force:source:push -u $ORGNAME >> push_errors.txt
+               cat push_errors.txt
+               pause
+             fi 
+             echo "Open this org in your browser (Y/N) ? \c";read YN4A
+             if [ "$YN4A" == "y" ] ; then sfdx force:org:open -u "$ORGNAME" ; fi
+             ;;
+        d|D) sfdx force:org:list
+             echo "Please Enter Org to Delete ->\c";read ORGNAME
+             echo "Are you SURE you want to DELETE $ORGNAME (Y/N) \c";read YN4
+             if [ "$YN4" == "y" ] ; then
+               sfdx force:org:delete -u $ORGNAME -p
+               pause
+             fi ;;
+        e|E) cat push_errors.txt; pause ;;
+        p|P) sfdx force:org:list
+             echo "Please Enter Org to Push to ->\c";read ORGNAME
+             echo "Are you SURE you want to PUSH to $ORGNAME (Y/N) \c";read YN4
+             if [ "$YN4" == "y" ] ; then
+               echo "Pushing $PROJECT Source to $ORGNAME org (This may take a while) ..."
+               DT=`date`
+               echo "Push Request to $ORGNAME - $DT" > pull_errors.txt
+               sfdx force:source:push -u $ORGNAME >> push_errors.txt
+               cat push_errors.txt
+               pause
+             fi ;;
+        u|U) sfdx force:org:list
+             echo "Please Enter Org to Pull From ->\c";read ORGNAME
+             echo "Are you SURE you want to PULL FROM $ORGNAME (Y/N) \c";read YN4
+             if [ "$YN4" == "y" ] ; then
+               echo "Pulling $PROJECT Source from $ORGNAME org (This may take a while) ..."
+               DT=`date`
+               echo "Pull Request from $ORGNAME - $DT" > pull_errors.txt
+               sfdx force:source:pull -u $ORGNAME >> pull_errors.txt
+               cat pull_errors.txt
+               pause
+             fi ;;
+        v|V) echo "View Latest Push/Pull Errors:"
+             echo "  P) View Latest PUSH Errors."
+             echo "  L) View Latest PULL Errors."
+             echo "Please Choose ->\c";read PP
+             case $PP in
+               p|P) cat push_errors.txt; pause;;
+               l|L) cat pull_errors.txt; pause;;
+               *) ;;
+             esac ;;
+      	q|Q|x|X) DONE4="yes";;
+      	*) echo "$OPT4 is not a valid option.";pause;;
+    esac
+  done	
 }
 ################################################################
 ################################################################
