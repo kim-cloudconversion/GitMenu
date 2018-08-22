@@ -429,10 +429,12 @@ sfdx_menu() {
     echo "  L) List Salesforce DX Orgs."
     echo "  C) Create a Scratch Org."
     echo "  D) Delete a Scratch Org."
-    echo "  E) View Latest Push Errors."
+    echo "  E) Export Data from Scratch Org."
+    echo "  I) Import Data into Scratch Org."
     echo "  P) Push Source to a Scratch Org."
     echo "  U) Pull Source from a Scratch Org."
     echo "  V) View Latest Push/Pull Errors."
+    echo "  A) Add Prerequisite Packages."
 
     echo "  Q or X) Quit (Exit SFDX Menu)"
     echo "Please Select ->\c"; read OPT4
@@ -487,6 +489,17 @@ sfdx_menu() {
                sfdx force:source:push -u $ORGNAME >> push_errors.txt
                cat push_errors.txt
                pause
+               for FILE in *.json
+                 do
+                 YN4C=
+                 NAME=`echo $FILE | cut -f 1 -d '.'`
+                 if [ "$NAME" != "sfdx-project" ] ; then
+                   echo "Push $NAME Data to $ORGNAME (Y/N) ? \c";read YN4C
+                   if [ "$YN4C" == "y" ] ; then
+                     sfdx force:data:tree:import -f $FILE -u $ORGNAME
+                     fi
+                   fi
+                 done
              fi 
              echo "Open this org in your browser (Y/N) ? \c";read YN4A
              if [ "$YN4A" == "y" ] ; then sfdx force:org:open -u "$ORGNAME" ; fi
@@ -498,7 +511,42 @@ sfdx_menu() {
                sfdx force:org:delete -u $ORGNAME -p
                pause
              fi ;;
-        e|E) cat push_errors.txt; pause ;;
+        e|E) echo "Export Tata from Scratch Org (to Import into another Scratch Org)"
+             ORGNAME=
+             echo "Please Enter Org to Export From ->\c";read ORGNAME
+             if [ "$ORGNAME" != "" ] ; then
+               echo "Please Enter your SOQL Query:";read QUERY
+               if [ "$QUERY" != "" ] ; then
+                 RESP=`sfdx force:data:tree:export -q "$QUERY" -u $ORGNAME`
+                 echo $RESP
+                 FILE=`echo $RESP | cut -f 5 -d ' '`
+                 TEMP=`grep $FILE .forceignore`
+                 if [ "$TEMP" == "" ] ; then
+                   echo $FILE >> .forceignore
+                   echo "$FILE Added to .forceignore"
+                   fi
+                 pause
+                 fi
+               fi
+             ;;
+        i|I) echo "Import Data into a Scratch Org:"
+             ORGNAME=
+             echo "Please Enter Org to Import Into ->\c";read ORGNAME
+             if [ "$ORGNAME" != "" ] ; then
+               for FILE in *.json
+                 do
+                 YN4C=
+                 NAME=`echo $FILE | cut -f 1 -d '.'`
+                 if [ "$NAME" != "sfdx-project" ] ; then
+                   echo "Push $NAME Data to $ORGNAME (Y/N) ? \c";read YN4C
+                   if [ "$YN4C" == "y" ] ; then
+                     sfdx force:data:tree:import -f $FILE -u $ORGNAME
+                     fi
+                   fi
+                 done
+               pause
+               fi
+             ;;
         p|P) sfdx force:org:list
              echo "Please Enter Org to Push to ->\c";read ORGNAME
              echo "Are you SURE you want to PUSH to $ORGNAME (Y/N) \c";read YN4
@@ -530,6 +578,31 @@ sfdx_menu() {
                l|L) cat pull_errors.txt; pause;;
                *) ;;
              esac ;;
+        a|A) echo "Add Prerequisite Packages to deploy when creating Scratch Orgs:"
+             echo "Existing Packages (packages.txt):"
+             cat packages.txt
+             PKGID=
+             echo "Please Enter Package ID (04t...) ->\c"; read PKGID;
+             if [ "$PKGID" != "" ] ; then
+               TEMP=`grep $PKGID packages.txt`
+               if [ "$TEMP" != "" ] ; then
+                 echo "Please Enter Package Name/Version ->\c"; read PKGNAME
+                 if [ "$PKGNAME" != "" ] ; then
+                   echo "$PKGID\t$PKGNAME" >> packages.txt
+                   echo "$PKGNAME ($PKGID) Added."
+                   pause
+                 else
+                   echo "Cancelled because you didn't enter a Package Name."
+                   pause
+                   fi
+               else
+                 echo "Package $PKGID Already Exists in packages.txt"
+                 pause
+                 fi
+             else
+               echo "Cancelled because you didn't enter a Package ID."
+               fi 
+             ;;
       	q|Q|x|X) DONE4="yes";;
       	*) echo "$OPT4 is not a valid option.";pause;;
     esac
